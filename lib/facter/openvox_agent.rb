@@ -15,6 +15,10 @@
 # - service: whether puppet.service was running and enabled when the run
 #   started. Replacing puppet-agent stops the service (and on EL disables it)
 #   in the middle of the run, so the class needs the state from before.
+# - server_configured: whether the agent finds its server through its own
+#   configuration (server or server_list set, or SRV records) rather than the
+#   implicit server=puppet that OpenVox 9 removed. nil when Puppet's settings
+#   are not loaded, such as under a standalone facter.
 Facter.add(:openvox_agent) do
   confine kernel: 'Linux'
 
@@ -51,12 +55,25 @@ Facter.add(:openvox_agent) do
       }
     end
 
+    server_configured = nil
+    if defined?(Puppet) && Puppet.respond_to?(:settings)
+      begin
+        settings = Puppet.settings
+        server_configured = %i[server server_list].any? do |name|
+          settings.set_by_config?(name) || (settings.respond_to?(:set_by_cli?) && settings.set_by_cli?(name))
+        end || Puppet[:use_srv_records] == true
+      rescue StandardError
+        server_configured = nil
+      end
+    end
+
     {
       'agent_package' => agent_names.find { |name| installed.include?(name) },
       'release_packages' => present.grep(release_pattern).sort,
       'server_packages' => server_names.select { |name| installed.include?(name) },
       'held_packages' => (held & agent_names).sort,
       'service' => service,
+      'server_configured' => server_configured,
     }
   end
 end

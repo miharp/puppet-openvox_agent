@@ -94,6 +94,13 @@ for every parameter.
   the class does nothing and logs a warning. Upgrade those with
   [ovadm](https://forge.puppet.com/modules/miharp/ovadm)'s `ovadm::upgrade`,
   server first, then agents: an OpenVox 8 agent cannot use a Puppet 7 server.
+- **Agents that would lose their server.** OpenVox 9 removed the implicit
+  `server=puppet`, so an agent that reaches its server only through that
+  default fails every run after moving to 9, and Puppet can no longer fix it.
+  The class does not move such an agent to `openvox9` or later and logs a
+  warning; set `server` or `server_list` first (for example with
+  `puppetlabs-puppet_conf`). Agents using DNS SRV records are fine. Hosts
+  applying catalogs with `puppet apply` are not affected.
 - **Holds.** An `apt-mark hold` or dnf/yum `versionlock` on the agent package
   is reported in a warning, not removed. The package manager refuses the
   change until you lift it.
@@ -115,6 +122,7 @@ the class needs:
 | `server_packages` | installed `openvox-server`, `openvoxdb`, `puppetserver`, `puppetdb` |
 | `held_packages` | agent packages held by apt-mark or versionlock |
 | `service` | whether `puppet.service` was `running` and `enabled` when the run started |
+| `server_configured` | whether `server` or `server_list` is set, or SRV records are used, rather than the implicit `server=puppet` |
 
 ## Limitations
 

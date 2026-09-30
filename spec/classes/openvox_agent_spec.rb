@@ -199,6 +199,29 @@ describe 'openvox_agent' do
         it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
       end
 
+      context 'when moving an agent without its own server setting to openvox9' do
+        let(:agent_state) { super().merge('server_configured' => false) }
+        let(:params) { { collection: 'openvox9' } }
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.not_to contain_package('openvox-agent') }
+        it { is_expected.not_to contain_class('openvox_agent::repo') }
+      end
+
+      context 'when moving an agent with its own server setting to openvox9' do
+        let(:agent_state) { super().merge('server_configured' => true) }
+        let(:params) { { collection: 'openvox9' } }
+
+        it { is_expected.to contain_package('openvox9-release') }
+        it { is_expected.to contain_package('openvox-agent') }
+      end
+
+      context 'with an agent without its own server setting staying on openvox8' do
+        let(:agent_state) { super().merge('server_configured' => false) }
+
+        it { is_expected.to contain_package('openvox-agent') }
+      end
+
       context 'on a server host' do
         let(:agent_state) { super().merge('server_packages' => ['openvox-server']) }
 

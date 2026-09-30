@@ -27,6 +27,10 @@ place of the release packages of other OpenVox and Puppet major versions,
 ensures openvox-agent, and puts the agent service back the way it was once
 the package has changed.
 
+An agent that reaches its server only through the implicit `server=puppet`
+is not moved to OpenVox 9 or later, which removed that default: it could not
+run again to be fixed. Set `server` or `server_list` first.
+
 Hosts running openvox-server or openvoxdb, or the Puppet packages they
 replace, are left alone with a warning: those packages require a matching
 openvox-agent, so the agent moves with the server. Upgrade them with
