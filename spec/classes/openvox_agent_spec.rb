@@ -35,7 +35,7 @@ describe 'openvox_agent' do
         it { is_expected.not_to contain_service('puppet') }
 
         if os_facts[:os]['family'] == 'Debian'
-          it { is_expected.to contain_file('/var/cache/openvox_agent').with_ensure('directory').with_recurse(true).with_purge(true) }
+          it { is_expected.to contain_file('/var/cache/openvox_agent').with_ensure('directory').without_recurse.without_purge }
 
           it do
             is_expected.to contain_file("/var/cache/openvox_agent/openvox8-release-#{platform}.deb")
@@ -73,6 +73,8 @@ describe 'openvox_agent' do
         it { is_expected.to compile.with_all_deps }
         it { is_expected.to contain_package('openvox8-release') }
 
+        it { is_expected.not_to contain_file(%r{puppet7-release}) }
+
         if os_facts[:os]['family'] == 'Debian'
           it do
             is_expected.to contain_package('puppet7-release')
@@ -100,6 +102,14 @@ describe 'openvox_agent' do
         it { is_expected.to contain_package('openvox-agent').with_ensure('latest') }
         it { is_expected.to contain_package('openvox9-release') }
         it { is_expected.to contain_package('openvox8-release').with_ensure(debian ? 'purged' : 'absent') }
+
+        if os_facts[:os]['family'] == 'Debian'
+          it do
+            is_expected.to contain_file("/var/cache/openvox_agent/openvox8-release-#{platform}.deb")
+              .with_ensure('absent')
+              .that_requires('Package[openvox9-release]')
+          end
+        end
       end
 
       context 'with a bare version' do

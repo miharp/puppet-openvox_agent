@@ -15,11 +15,8 @@ class openvox_agent::repo {
       # URL leaves the old repository in place.
       $package_file = "/var/cache/openvox_agent/${release}-${openvox_agent::platform}.deb"
 
-      # Purged, so the previous collection's package goes once it is replaced.
       file { '/var/cache/openvox_agent':
-        ensure  => directory,
-        recurse => true,
-        purge   => true,
+        ensure => directory,
       }
 
       file { $package_file:
@@ -37,6 +34,16 @@ class openvox_agent::repo {
         ensure   => installed,
         provider => 'dpkg',
         source   => $package_file,
+      }
+
+      # Remove the packages this class downloaded for earlier collections, and
+      # nothing else: the directory is not purged, so files anyone else puts
+      # there are left alone.
+      $stale.filter |$package| { $package =~ /\Aopenvox\d+-release\z/ }.each |$package| {
+        file { "/var/cache/openvox_agent/${package}-${openvox_agent::platform}.deb":
+          ensure  => absent,
+          require => Package[$release],
+        }
       }
 
       exec { 'openvox_agent apt-get update':
