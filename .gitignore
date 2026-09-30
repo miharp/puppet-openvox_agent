@@ -1,0 +1,13 @@
+/.bundle/
+/Gemfile.lock
+/pkg/
+/spec/fixtures/manifests/
+/spec/fixtures/modules/
+/vendor/
+/.vendor/
+/coverage/
+/log/
+/junit/
+/.yardoc/
+/doc/
+.DS_Store
