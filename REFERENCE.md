@@ -14,7 +14,7 @@
 
 * `openvox_agent::install`: Ensures openvox-agent
 * `openvox_agent::repo`: Installs the collection's release package in place of other major versions'
-* `openvox_agent::service`: Restarts the agent service after an upgrade, and manages its state when asked
+* `openvox_agent::service`: Puts the agent service back after openvox-agent changes, and manages its state when asked
 
 ## Classes
 
@@ -24,8 +24,8 @@ Assign it to agents to move them to a collection or version on their next
 run: from Puppet 7 to OpenVox 8, from OpenVox 8 to 9, or to a newer release
 within a collection. The class installs the collection's release package in
 place of the release packages of other OpenVox and Puppet major versions,
-ensures openvox-agent, and restarts the agent service once the package has
-changed.
+ensures openvox-agent, and puts the agent service back the way it was once
+the package has changed.
 
 Hosts running openvox-server or openvoxdb, or the Puppet packages they
 replace, are left alone with a warning: those packages require a matching
@@ -116,8 +116,11 @@ Default value: `'https://yum.voxpupuli.org'`
 
 Data type: `Boolean`
 
-Whether to restart the agent service after openvox-agent changes, and to
-manage `service_ensure` and `service_enable` when they are set.
+Whether to put the agent service back after openvox-agent changes, and to
+manage `service_ensure` and `service_enable` when they are set. Replacing
+puppet-agent stops the service (on EL it also disables it), and an upgraded
+daemon keeps running the old code, so without this a daemon stays stopped
+or stale after the switch.
 
 Default value: `true`
 
@@ -133,8 +136,10 @@ Default value: `'puppet'`
 
 Data type: `Optional[Enum['running', 'stopped']]`
 
-Whether the agent service should be running. Unmanaged when unset, so
-sites that run the agent from cron or a timer are not given a daemon.
+Whether the agent service should be running. When unset, it is left as it
+was when the run started: restarted after the package changes if it was
+running, left stopped if it was not. Sites that run the agent from cron or
+a timer are not given a daemon.
 
 Default value: `undef`
 
@@ -142,7 +147,9 @@ Default value: `undef`
 
 Data type: `Optional[Boolean]`
 
-Whether the agent service starts at boot. Unmanaged when unset.
+Whether the agent service starts at boot. When unset, it is left as it was
+when the run started, and enabled again after the package changes if it
+was enabled.
 
 Default value: `undef`
 

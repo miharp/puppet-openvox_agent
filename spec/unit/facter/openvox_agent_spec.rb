@@ -25,6 +25,9 @@ describe 'openvox_agent fact' do
         openvoxdb rc
       DPKG
       allow(Facter::Core::Execution).to receive(:execute).with('apt-mark showhold', on_fail: '').and_return("openvox-agent\ncurl\n")
+      allow(Facter::Core::Execution).to receive(:which).with('systemctl').and_return('/usr/bin/systemctl')
+      allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-active puppet.service', on_fail: '').and_return("active\n")
+      allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-enabled puppet.service', on_fail: '').and_return("enabled\n")
     end
 
     it 'reports the installed agent, release packages including removed ones, server packages and holds' do
@@ -33,6 +36,7 @@ describe 'openvox_agent fact' do
         'release_packages' => %w[openvox8-release puppet7-release],
         'server_packages' => ['openvox-server'],
         'held_packages' => ['openvox-agent'],
+        'service' => { 'running' => true, 'enabled' => true },
       )
     end
   end
@@ -46,6 +50,9 @@ describe 'openvox_agent fact' do
       allow(File).to receive(:readable?).with('/etc/dnf/plugins/versionlock.list').and_return(true)
       allow(File).to receive(:readable?).with('/etc/yum/pluginconf.d/versionlock.list').and_return(false)
       allow(File).to receive(:readlines).with('/etc/dnf/plugins/versionlock.list').and_return(["# comment\n", "puppet-agent-0:7.34.0-1.el9.*\n"])
+      allow(Facter::Core::Execution).to receive(:which).with('systemctl').and_return('/usr/bin/systemctl')
+      allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-active puppet.service', on_fail: '').and_return('')
+      allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-enabled puppet.service', on_fail: '').and_return("disabled\n")
     end
 
     it 'reports the installed agent, release packages and versionlocked agent packages' do
@@ -54,6 +61,7 @@ describe 'openvox_agent fact' do
         'release_packages' => ['puppet7-release'],
         'server_packages' => [],
         'held_packages' => ['puppet-agent'],
+        'service' => { 'running' => false, 'enabled' => false },
       )
     end
   end

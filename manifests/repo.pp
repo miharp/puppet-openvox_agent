@@ -36,6 +36,16 @@ class openvox_agent::repo {
         source   => $package_file,
       }
 
+      # Remove the packages this class downloaded for earlier collections, and
+      # nothing else: the directory is not purged, so files anyone else puts
+      # there are left alone.
+      $stale.filter |$package| { $package =~ /\Aopenvox\d+-release\z/ }.each |$package| {
+        file { "/var/cache/openvox_agent/${package}-${openvox_agent::platform}.deb":
+          ensure  => absent,
+          require => Package[$release],
+        }
+      }
+
       exec { 'openvox_agent apt-get update':
         command     => 'apt-get update',
         path        => ['/usr/bin', '/bin'],

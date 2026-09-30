@@ -31,16 +31,12 @@ describe 'openvox_agent' do
         it { is_expected.to contain_package('openvox-agent').with_ensure('present').with_install_options([]) }
         it { is_expected.to contain_package('openvox8-release') }
 
-        it do
-          is_expected.to contain_exec('openvox_agent restart after package change')
-            .with_command('systemctl --no-block try-restart puppet.service')
-            .with_refreshonly(true)
-            .that_subscribes_to('Package[openvox-agent]')
-        end
-
+        it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
         it { is_expected.not_to contain_service('puppet') }
 
         if os_facts[:os]['family'] == 'Debian'
+          it { is_expected.to contain_file('/var/cache/openvox_agent').with_ensure('directory').without_recurse.without_purge }
+
           it do
             is_expected.to contain_file("/var/cache/openvox_agent/openvox8-release-#{platform}.deb")
               .with_source("https://apt.voxpupuli.org/openvox8-release-#{platform}.deb")
@@ -77,6 +73,8 @@ describe 'openvox_agent' do
         it { is_expected.to compile.with_all_deps }
         it { is_expected.to contain_package('openvox8-release') }
 
+        it { is_expected.not_to contain_file(%r{puppet7-release}) }
+
         if os_facts[:os]['family'] == 'Debian'
           it do
             is_expected.to contain_package('puppet7-release')
@@ -104,6 +102,14 @@ describe 'openvox_agent' do
         it { is_expected.to contain_package('openvox-agent').with_ensure('latest') }
         it { is_expected.to contain_package('openvox9-release') }
         it { is_expected.to contain_package('openvox8-release').with_ensure(debian ? 'purged' : 'absent') }
+
+        if os_facts[:os]['family'] == 'Debian'
+          it do
+            is_expected.to contain_file("/var/cache/openvox_agent/openvox8-release-#{platform}.deb")
+              .with_ensure('absent')
+              .that_requires('Package[openvox9-release]')
+          end
+        end
       end
 
       context 'with a bare version' do
@@ -140,16 +146,57 @@ describe 'openvox_agent' do
         it { is_expected.to contain_package('openvox-agent') }
       end
 
+      context 'with the daemon running and enabled when the run started' do
+        let(:agent_state) { super().merge('service' => { 'running' => true, 'enabled' => true }) }
+
+        it do
+          is_expected.to contain_exec('openvox_agent restore agent service after package change')
+            .with_command('systemctl enable puppet.service && systemctl --no-block restart puppet.service')
+            .with_refreshonly(true)
+            .that_subscribes_to('Package[openvox-agent]')
+        end
+
+        it { is_expected.not_to contain_service('puppet') }
+      end
+
+      context 'with the daemon running but not enabled when the run started' do
+        let(:agent_state) { super().merge('service' => { 'running' => true, 'enabled' => false }) }
+
+        it { is_expected.to contain_exec('openvox_agent restore agent service after package change').with_command('systemctl --no-block restart puppet.service') }
+      end
+
+      context 'with the daemon stopped and disabled when the run started' do
+        let(:agent_state) { super().merge('service' => { 'running' => false, 'enabled' => false }) }
+
+        it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
+      end
+
+      context 'with service_ensure stopped and the daemon running when the run started' do
+        let(:agent_state) { super().merge('service' => { 'running' => true, 'enabled' => true }) }
+        let(:params) { { service_ensure: 'stopped', service_enable: false } }
+
+        it { is_expected.to contain_service('puppet').with_ensure('stopped').with_enable(false) }
+        it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
+      end
+
       context 'with the service managed' do
         let(:params) { { service_ensure: 'running', service_enable: true } }
 
         it { is_expected.to contain_service('puppet').with_ensure('running').with_enable(true) }
+
+        it do
+          is_expected.to contain_exec('openvox_agent restore agent service after package change')
+            .with_command('systemctl enable puppet.service && systemctl --no-block restart puppet.service')
+            .that_requires('Service[puppet]')
+        end
       end
 
       context 'with manage_service false' do
+        let(:agent_state) { super().merge('service' => { 'running' => true, 'enabled' => true }) }
         let(:params) { { manage_service: false } }
 
-        it { is_expected.not_to contain_exec('openvox_agent restart after package change') }
+        it { is_expected.not_to contain_class('openvox_agent::service') }
+        it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
       end
 
       context 'on a server host' do

@@ -12,6 +12,9 @@
 #   and their Puppet predecessors), which pin openvox-agent to their own version
 # - held_packages: agent packages held by apt-mark or dnf/yum versionlock,
 #   which block an upgrade
+# - service: whether puppet.service was running and enabled when the run
+#   started. Replacing puppet-agent stops the service (and on EL disables it)
+#   in the middle of the run, so the class needs the state from before.
 Facter.add(:openvox_agent) do
   confine kernel: 'Linux'
 
@@ -40,11 +43,20 @@ Facter.add(:openvox_agent) do
       next nil
     end
 
+    service = nil
+    if Facter::Core::Execution.which('systemctl')
+      service = {
+        'running' => Facter::Core::Execution.execute('systemctl is-active puppet.service', on_fail: '').strip == 'active',
+        'enabled' => Facter::Core::Execution.execute('systemctl is-enabled puppet.service', on_fail: '').strip == 'enabled',
+      }
+    end
+
     {
       'agent_package' => agent_names.find { |name| installed.include?(name) },
       'release_packages' => present.grep(release_pattern).sort,
       'server_packages' => server_names.select { |name| installed.include?(name) },
       'held_packages' => (held & agent_names).sort,
+      'service' => service,
     }
   end
 end
