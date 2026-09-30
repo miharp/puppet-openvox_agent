@@ -6,6 +6,8 @@ Notable changes to openvox_agent are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-30
+
 ### Added
 
 - The `openvox_agent` class: installs the collection's release package in
@@ -22,4 +24,5 @@ Notable changes to openvox_agent are recorded here. The format follows
   whether the agent's server is configured rather than defaulted.
 - Debian 12 and 13, Ubuntu 22.04 and 24.04, and EL 8, 9 and 10.
 
-[Unreleased]: https://github.com/miharp/puppet-openvox_agent/commits/main
+[Unreleased]: https://github.com/miharp/puppet-openvox_agent/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/miharp/puppet-openvox_agent/releases/tag/v0.1.0
