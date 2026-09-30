@@ -28,6 +28,8 @@ describe 'openvox_agent fact' do
       allow(Facter::Core::Execution).to receive(:which).with('systemctl').and_return('/usr/bin/systemctl')
       allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-active puppet.service', on_fail: '').and_return("active\n")
       allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-enabled puppet.service', on_fail: '').and_return("enabled\n")
+      allow(Puppet.settings).to receive(:set_by_config?).and_return(false)
+      allow(Puppet.settings).to receive(:set_by_config?).with(:server).and_return(true)
     end
 
     it 'reports the installed agent, release packages including removed ones, server packages and holds' do
@@ -37,6 +39,7 @@ describe 'openvox_agent fact' do
         'server_packages' => ['openvox-server'],
         'held_packages' => ['openvox-agent'],
         'service' => { 'running' => true, 'enabled' => true },
+        'server_configured' => true,
       )
     end
   end
@@ -53,6 +56,9 @@ describe 'openvox_agent fact' do
       allow(Facter::Core::Execution).to receive(:which).with('systemctl').and_return('/usr/bin/systemctl')
       allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-active puppet.service', on_fail: '').and_return('')
       allow(Facter::Core::Execution).to receive(:execute).with('systemctl is-enabled puppet.service', on_fail: '').and_return("disabled\n")
+      allow(Puppet.settings).to receive_messages(set_by_config?: false, set_by_cli?: false)
+      allow(Puppet).to receive(:[]).and_call_original
+      allow(Puppet).to receive(:[]).with(:use_srv_records).and_return(false)
     end
 
     it 'reports the installed agent, release packages and versionlocked agent packages' do
@@ -62,6 +68,7 @@ describe 'openvox_agent fact' do
         'server_packages' => [],
         'held_packages' => ['puppet-agent'],
         'service' => { 'running' => false, 'enabled' => false },
+        'server_configured' => false,
       )
     end
   end

@@ -7,6 +7,10 @@
 # ensures openvox-agent, and puts the agent service back the way it was once
 # the package has changed.
 #
+# An agent that reaches its server only through the implicit `server=puppet`
+# is not moved to OpenVox 9 or later, which removed that default: it could not
+# run again to be fixed. Set `server` or `server_list` first.
+#
 # Hosts running openvox-server or openvoxdb, or the Puppet packages they
 # replace, are left alone with a warning: those packages require a matching
 # openvox-agent, so the agent moves with the server. Upgrade them with
@@ -107,6 +111,15 @@ class openvox_agent (
     warning(@("MSG"/L))
       openvox_agent: ${trusted['certname']} runs ${agent_package.lest || { 'no agent package' }}; \
       set collection (such as openvox8) to switch it to OpenVox.
+      | MSG
+  } elsif $trusted['authenticated'] == 'remote' and $state['server_configured'] == false
+  and Integer($resolved_collection.regsubst(/\Aopenvox/, '')) >= 9 {
+    # Only for agent runs: a puppet apply host has no server to lose.
+    warning(@("MSG"/L))
+      openvox_agent: ${trusted['certname']} reaches its server through the implicit \
+      server=puppet, which OpenVox 9 removed; after moving to ${resolved_collection} \
+      every run would fail, and Puppet could no longer fix it. Set server (or \
+      server_list) first. Leaving the agent alone.
       | MSG
   } else {
     unless $held_packages.empty {
