@@ -1,5 +1,12 @@
 # openvox_agent
 
+[![CI](https://github.com/miharp/puppet-openvox_agent/actions/workflows/ci.yml/badge.svg)](https://github.com/miharp/puppet-openvox_agent/actions/workflows/ci.yml)
+[![OpenVox compatible](https://img.shields.io/badge/OpenVox-8%20%7C%209-orange.svg)](https://voxpupuli.org/openvox/)
+[![License](https://img.shields.io/github/license/miharp/puppet-openvox_agent)](https://github.com/miharp/puppet-openvox_agent/blob/main/LICENSE)
+
+[![Puppet Forge](https://img.shields.io/puppetforge/v/miharp/openvox_agent)](https://forge.puppet.com/modules/miharp/openvox_agent)
+[![Puppet Forge downloads](https://img.shields.io/puppetforge/dt/miharp/openvox_agent)](https://forge.puppet.com/modules/miharp/openvox_agent)
+
 Installs and upgrades `openvox-agent` from a Puppet run: from Puppet 7 to
 OpenVox 8, from OpenVox 8 to 9, or to a newer release within a collection.
 It is the OpenVox counterpart to the `puppetlabs-puppet_agent` class, whose
