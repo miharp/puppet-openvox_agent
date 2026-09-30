@@ -58,7 +58,11 @@ class { 'openvox_agent':
 ```
 
 Pin a version. A bare version is expanded for the platform (`8.29.0-1.el9`,
-`8.29.0-1+ubuntu24.04`); a full package version is used as it is:
+`8.29.0-1+ubuntu24.04`); a full package version is used as it is. When the
+installed version is not the pinned one, the class refreshes the package
+index first, so a newly published release is found. `latest` picks up new
+releases when the OS refreshes its index (the `apt-daily` and `dnf-makecache`
+timers), not on every run:
 
 ```puppet
 class { 'openvox_agent':

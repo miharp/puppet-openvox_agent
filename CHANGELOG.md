@@ -6,6 +6,14 @@ Notable changes to openvox_agent are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A `package_version` pinned to a release published since the package index
+  was last refreshed failed with "version not found" (apt) or "no match"
+  (dnf): the index was only refreshed when the release package changed. It is
+  now refreshed whenever the installed version is not the pinned one, which
+  also covers `manage_repo => false`.
+
 ## [0.1.0] - 2026-09-30
 
 ### Added
