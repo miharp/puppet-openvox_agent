@@ -29,6 +29,7 @@ describe 'openvox_agent' do
         it { is_expected.to contain_class('openvox_agent::repo').that_comes_before('Class[openvox_agent::install]') }
         it { is_expected.to contain_class('openvox_agent::service').that_requires('Class[openvox_agent::install]') }
         it { is_expected.to contain_package('openvox-agent').with_ensure('present').with_install_options([]) }
+        it { is_expected.not_to contain_exec('openvox_agent refresh the package index for the pinned version') }
         it { is_expected.to contain_package('openvox8-release') }
 
         it { is_expected.not_to contain_exec('openvox_agent restore agent service after package change') }
@@ -117,9 +118,35 @@ describe 'openvox_agent' do
 
         if os_facts[:os]['family'] == 'Debian'
           it { is_expected.to contain_package('openvox-agent').with_ensure("8.29.0-1+#{platform}").with_install_options(['--allow-downgrades']) }
+
+          it do
+            is_expected.to contain_exec('openvox_agent refresh the package index for the pinned version')
+              .with_command('apt-get update')
+              .with_unless("dpkg-query -W -f='${Version}' openvox-agent 2>/dev/null | grep -qxF '8.29.0-1+#{platform}'")
+              .that_comes_before('Package[openvox-agent]')
+          end
         else
           it { is_expected.to contain_package('openvox-agent').with_ensure("8.29.0-1.#{platform}").with_install_options([]) }
+
+          it do
+            is_expected.to contain_exec('openvox_agent refresh the package index for the pinned version')
+              .with_command('dnf clean expire-cache')
+              .with_unless("rpm -q --queryformat '%{VERSION}-%{RELEASE}' openvox-agent 2>/dev/null | grep -qxF '8.29.0-1.#{platform}'")
+              .that_comes_before('Package[openvox-agent]')
+          end
         end
+      end
+
+      context 'with package_version latest' do
+        let(:params) { { package_version: 'latest' } }
+
+        it { is_expected.not_to contain_exec('openvox_agent refresh the package index for the pinned version') }
+      end
+
+      context 'with manage_repo false and a pinned version' do
+        let(:params) { { manage_repo: false, package_version: '8.29.0' } }
+
+        it { is_expected.to contain_exec('openvox_agent refresh the package index for the pinned version') }
       end
 
       context 'with a full package version' do

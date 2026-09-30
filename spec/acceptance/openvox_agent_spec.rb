@@ -52,6 +52,25 @@ describe 'openvox_agent' do
     end
   end
 
+  context 'when the pin moves to a version the package index does not know yet' do
+    # Pin an older release, then drop the cached OpenVox index as if the newer
+    # release had been published after the last refresh. That reproduces the
+    # failure on Debian and Ubuntu; dnf cannot be made stale this way, so on
+    # EL the case checks that a pin moving forward converges.
+    before(:all) do
+      apply_manifest("class { 'openvox_agent': collection => 'openvox8', package_version => '8.28.1' }", catch_failures: true)
+      shell('rm -f /var/lib/apt/lists/*voxpupuli* 2>/dev/null; true')
+    end
+
+    it_behaves_like 'an idempotent resource' do
+      let(:manifest) { "class { 'openvox_agent': collection => 'openvox8', package_version => '8.29.0' }" }
+    end
+
+    describe 'afterwards' do
+      it { expect(puppet_version).to eq('8.29.0') }
+    end
+  end
+
   context 'when moving to openvox9' do
     it_behaves_like 'an idempotent resource' do
       let(:manifest) { "class { 'openvox_agent': collection => 'openvox9', package_version => 'latest' }" }
