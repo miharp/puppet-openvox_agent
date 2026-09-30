@@ -35,10 +35,13 @@ class { 'openvox_agent':
    directly: the package declares Conflicts and Replaces (deb) or Obsoletes
    (rpm) on it, and `puppet.conf`, the SSL directory and the certificates are
    kept. No OpenVox 7 step is needed between Puppet 7 and OpenVox 8.
-3. **Restarts the agent service** when the package changed, so a daemon does
-   not keep running the old code. The restart is queued rather than waited
-   for, so a daemon upgrading itself finishes the run first, and an agent not
-   running as a daemon is left alone.
+3. **Puts the agent service back** the way it was when the run started.
+   Replacing `puppet-agent` stops the `puppet` service in the middle of the
+   run (on EL it also disables it), and an upgraded daemon keeps running the
+   old code. So when the package has changed, a daemon that was running is
+   restarted and one that was enabled is enabled again; one that was not
+   running stays stopped. The restart is queued rather than waited for, so a
+   daemon upgrading itself finishes the run first.
 
 Read the upstream upgrade guide before moving a fleet to a new major version:
 most of what changes is in the language and the agent's defaults, which this
@@ -94,9 +97,9 @@ for every parameter.
 - **Holds.** An `apt-mark hold` or dnf/yum `versionlock` on the agent package
   is reported in a warning, not removed. The package manager refuses the
   change until you lift it.
-- **The service state.** `service_ensure` and `service_enable` are unmanaged
-  unless you set them, so sites running the agent from cron or a timer are
-  not given a daemon.
+- **The service state.** Unless you set `service_ensure` and
+  `service_enable`, the service ends each run the way it started it, so sites
+  running the agent from cron or a timer are not given a daemon.
 - **Agent settings.** Use `puppetlabs-puppet_conf` or `theforeman-puppet` for
   `puppet.conf`.
 
@@ -111,6 +114,7 @@ the class needs:
 | `release_packages` | installed `openvox<N>-release` and `puppet<N>-release` packages |
 | `server_packages` | installed `openvox-server`, `openvoxdb`, `puppetserver`, `puppetdb` |
 | `held_packages` | agent packages held by apt-mark or versionlock |
+| `service` | whether `puppet.service` was `running` and `enabled` when the run started |
 
 ## Limitations
 

@@ -15,8 +15,11 @@ class openvox_agent::repo {
       # URL leaves the old repository in place.
       $package_file = "/var/cache/openvox_agent/${release}-${openvox_agent::platform}.deb"
 
+      # Purged, so the previous collection's package goes once it is replaced.
       file { '/var/cache/openvox_agent':
-        ensure => directory,
+        ensure  => directory,
+        recurse => true,
+        purge   => true,
       }
 
       file { $package_file:

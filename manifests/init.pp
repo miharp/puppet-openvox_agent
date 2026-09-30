@@ -4,8 +4,8 @@
 # run: from Puppet 7 to OpenVox 8, from OpenVox 8 to 9, or to a newer release
 # within a collection. The class installs the collection's release package in
 # place of the release packages of other OpenVox and Puppet major versions,
-# ensures openvox-agent, and restarts the agent service once the package has
-# changed.
+# ensures openvox-agent, and puts the agent service back the way it was once
+# the package has changed.
 #
 # Hosts running openvox-server or openvoxdb, or the Puppet packages they
 # replace, are left alone with a warning: those packages require a matching
@@ -46,18 +46,25 @@
 #   Base URL the EL release package is downloaded from.
 #
 # @param manage_service
-#   Whether to restart the agent service after openvox-agent changes, and to
-#   manage `service_ensure` and `service_enable` when they are set.
+#   Whether to put the agent service back after openvox-agent changes, and to
+#   manage `service_ensure` and `service_enable` when they are set. Replacing
+#   puppet-agent stops the service (on EL it also disables it), and an upgraded
+#   daemon keeps running the old code, so without this a daemon stays stopped
+#   or stale after the switch.
 #
 # @param service_name
 #   The agent service.
 #
 # @param service_ensure
-#   Whether the agent service should be running. Unmanaged when unset, so
-#   sites that run the agent from cron or a timer are not given a daemon.
+#   Whether the agent service should be running. When unset, it is left as it
+#   was when the run started: restarted after the package changes if it was
+#   running, left stopped if it was not. Sites that run the agent from cron or
+#   a timer are not given a daemon.
 #
 # @param service_enable
-#   Whether the agent service starts at boot. Unmanaged when unset.
+#   Whether the agent service starts at boot. When unset, it is left as it was
+#   when the run started, and enabled again after the package changes if it
+#   was enabled.
 #
 class openvox_agent (
   Optional[Pattern[/\Aopenvox\d+\z/]]  $collection      = undef,
@@ -92,9 +99,9 @@ class openvox_agent (
 
   if !$server_packages.empty {
     warning(@("MSG"/L))
-      openvox_agent: ${trusted['certname']} runs ${server_packages.join(', ')}, which \
-      require a matching openvox-agent; leaving the agent alone. Upgrade the host \
-      with ovadm::upgrade.
+      openvox_agent: ${trusted['certname']} runs ${server_packages.join(', ')}; server \
+      packages require a matching openvox-agent, so the agent is left alone. Upgrade \
+      the host with ovadm::upgrade.
       | MSG
   } elsif $resolved_collection =~ Undef {
     warning(@("MSG"/L))
