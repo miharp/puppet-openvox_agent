@@ -1,6 +1,6 @@
 {
   "name": "miharp-openvox_agent",
-  "version": "0.1.2-rc0",
+  "version": "0.2.0",
   "author": "Mike Harp",
   "summary": "Installs and upgrades openvox-agent from a Puppet run, including the switch from Puppet 7 and between OpenVox major versions",
   "license": "Apache-2.0",

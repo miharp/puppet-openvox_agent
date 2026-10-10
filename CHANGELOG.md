@@ -6,6 +6,8 @@ Notable changes to openvox_agent are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-10
+
 ### Added
 
 - `manage_server_hosts`: manage the agent on a host running openvox-server
@@ -49,6 +51,7 @@ Notable changes to openvox_agent are recorded here. The format follows
   whether the agent's server is configured rather than defaulted.
 - Debian 12 and 13, Ubuntu 22.04 and 24.04, and EL 8, 9 and 10.
 
-[Unreleased]: https://github.com/miharp/puppet-openvox_agent/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/miharp/puppet-openvox_agent/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/miharp/puppet-openvox_agent/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/miharp/puppet-openvox_agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/miharp/puppet-openvox_agent/releases/tag/v0.1.0
