@@ -1,6 +1,9 @@
 # @summary Installs the collection's release package in place of other major versions'
 #
-# @api private
+# Declared by the openvox_agent class, never directly. It is public so that
+# a module moving a package that depends on the agent can order it between
+# the repository and the agent:
+# `Class['openvox_agent::repo'] -> Package['openvox-server'] -> Package['openvox-agent']`.
 #
 class openvox_agent::repo {
   $release = "${openvox_agent::resolved_collection}-release"
