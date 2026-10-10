@@ -256,6 +256,25 @@ describe 'openvox_agent' do
         it { is_expected.not_to contain_package('openvox-agent') }
         it { is_expected.not_to contain_class('openvox_agent::repo') }
       end
+
+      context 'on a server host with manage_server_hosts' do
+        let(:agent_state) { super().merge('server_packages' => ['openvox-server'], 'service' => { 'running' => true, 'enabled' => true }) }
+        let(:params) { { manage_server_hosts: true, collection: 'openvox9', package_version: 'latest' } }
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_class('openvox_agent::repo').that_comes_before('Class[openvox_agent::install]') }
+        it { is_expected.to contain_package('openvox9-release') }
+        it { is_expected.to contain_package('openvox-agent').with_ensure('latest') }
+        it { is_expected.to contain_exec('openvox_agent restore agent service after package change') }
+      end
+
+      context 'on a server host with manage_server_hosts and no server setting, moving to openvox9' do
+        let(:agent_state) { super().merge('server_packages' => ['openvox-server'], 'server_configured' => false) }
+        let(:params) { { manage_server_hosts: true, collection: 'openvox9' } }
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.not_to contain_package('openvox-agent') }
+      end
     end
   end
 end

@@ -9,12 +9,17 @@
 #### Public Classes
 
 * [`openvox_agent`](#openvox_agent): Installs and upgrades openvox-agent from a Puppet run
+* [`openvox_agent::repo`](#openvox_agent--repo): Installs the collection's release package in place of other major versions'
 
 #### Private Classes
 
 * `openvox_agent::install`: Ensures openvox-agent
-* `openvox_agent::repo`: Installs the collection's release package in place of other major versions'
 * `openvox_agent::service`: Puts the agent service back after openvox-agent changes, and manages its state when asked
+
+### Functions
+
+* [`openvox_agent::package_version`](#openvox_agent--package_version): Expands a bare version to the platform's package version
+* [`openvox_agent::platform`](#openvox_agent--platform): The distribution release the OpenVox packages are built for
 
 ## Classes
 
@@ -33,8 +38,14 @@ run again to be fixed. Set `server` or `server_list` first.
 
 Hosts running openvox-server or openvoxdb, or the Puppet packages they
 replace, are left alone with a warning: those packages require a matching
-openvox-agent, so the agent moves with the server. Upgrade them with
+openvox-agent, so the agent moves with the server. Manage them with
+[openvox_server](https://forge.puppet.com/modules/miharp/openvox_server),
+which declares this class with `manage_server_hosts` and orders the
+server package first, or upgrade them with
 [ovadm](https://forge.puppet.com/modules/miharp/ovadm)'s `ovadm::upgrade`.
+
+Whenever the class leaves a host alone, `$openvox_agent::left_alone` holds
+the reason, for a module declaring this class to act on.
 
 #### Examples
 
@@ -63,6 +74,7 @@ The following parameters are available in the `openvox_agent` class:
 * [`manage_repo`](#-openvox_agent--manage_repo)
 * [`apt_source`](#-openvox_agent--apt_source)
 * [`yum_source`](#-openvox_agent--yum_source)
+* [`manage_server_hosts`](#-openvox_agent--manage_server_hosts)
 * [`manage_service`](#-openvox_agent--manage_service)
 * [`service_name`](#-openvox_agent--service_name)
 * [`service_ensure`](#-openvox_agent--service_ensure)
@@ -116,6 +128,19 @@ Base URL the EL release package is downloaded from.
 
 Default value: `'https://yum.voxpupuli.org'`
 
+##### <a name="-openvox_agent--manage_server_hosts"></a>`manage_server_hosts`
+
+Data type: `Boolean`
+
+Whether to manage the agent on a host running openvox-server or openvoxdb
+(or puppetserver or puppetdb). Off, such hosts are left alone: a server
+package requires an agent of its own major, so a lone agent move fails on
+the dependency. For a module that moves the server package first and
+orders it between `openvox_agent::repo` and `Package['openvox-agent']`,
+the way openvox_server does.
+
+Default value: `false`
+
 ##### <a name="-openvox_agent--manage_service"></a>`manage_service`
 
 Data type: `Boolean`
@@ -156,3 +181,65 @@ when the run started, and enabled again after the package changes if it
 was enabled.
 
 Default value: `undef`
+
+### <a name="openvox_agent--repo"></a>`openvox_agent::repo`
+
+Declared by the openvox_agent class, never directly. It is public so that
+a module moving a package that depends on the agent can order it between
+the repository and the agent:
+`Class['openvox_agent::repo'] -> Package['openvox-server'] -> Package['openvox-agent']`.
+
+## Functions
+
+### <a name="openvox_agent--package_version"></a>`openvox_agent::package_version`
+
+Type: Puppet Language
+
+`present`, `installed`, `latest` and versions containing a `-` are returned
+as they are. A bare version such as `8.29.0` becomes `8.29.0-1+debian12` on
+Debian and Ubuntu and `8.29.0-1.el9` on EL, the way the OpenVox packages
+are versioned. Shared with openvox_server, which versions openvox-server
+the same way.
+
+#### `openvox_agent::package_version(String[1] $version, String[1] $platform, String[1] $os_family)`
+
+`present`, `installed`, `latest` and versions containing a `-` are returned
+as they are. A bare version such as `8.29.0` becomes `8.29.0-1+debian12` on
+Debian and Ubuntu and `8.29.0-1.el9` on EL, the way the OpenVox packages
+are versioned. Shared with openvox_server, which versions openvox-server
+the same way.
+
+Returns: `String[1]` The package version to ensure.
+
+##### `version`
+
+Data type: `String[1]`
+
+The requested version.
+
+##### `platform`
+
+Data type: `String[1]`
+
+The distribution release the packages are built for, from
+`openvox_agent::platform`.
+
+##### `os_family`
+
+Data type: `String[1]`
+
+The `os.family` fact.
+
+### <a name="openvox_agent--platform"></a>`openvox_agent::platform`
+
+Type: Puppet Language
+
+Release packages and package versions are per distribution release:
+`debian12`, `ubuntu24.04`, `el9`.
+
+#### `openvox_agent::platform()`
+
+Release packages and package versions are per distribution release:
+`debian12`, `ubuntu24.04`, `el9`.
+
+Returns: `String[1]` The platform string.

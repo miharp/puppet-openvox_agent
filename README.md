@@ -95,7 +95,10 @@ for every parameter.
   class is safe to include everywhere.
 - **Server hosts.** `openvox-server` and `openvoxdb` require a matching
   `openvox-agent`, so on hosts running them (or `puppetserver` and `puppetdb`)
-  the class does nothing and logs a warning. Upgrade those with
+  the class does nothing and logs a warning. Manage those with
+  [openvox_server](https://forge.puppet.com/modules/miharp/openvox_server),
+  which declares this class with `manage_server_hosts` and moves the server
+  package first, or upgrade them with
   [ovadm](https://forge.puppet.com/modules/miharp/ovadm)'s `ovadm::upgrade`,
   server first, then agents: an OpenVox 8 agent cannot use a Puppet 7 server.
 - **Agents that would lose their server.** OpenVox 9 removed the implicit

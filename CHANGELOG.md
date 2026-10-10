@@ -6,6 +6,21 @@ Notable changes to openvox_agent are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `manage_server_hosts`: manage the agent on a host running openvox-server
+  or openvoxdb, for a module that moves the server package first and orders
+  it between the repository and the agent, the way
+  [openvox_server](https://forge.puppet.com/modules/miharp/openvox_server)
+  does. Off by default, so server hosts are left alone as before.
+- `$openvox_agent::left_alone`: the reason the class leaves a host alone,
+  or undef, for a module declaring the class to act on.
+- The `openvox_agent::repo` class is public, so that another module can
+  order a package between the repository and the agent, and
+  `openvox_agent::platform` and `openvox_agent::package_version` are public
+  functions: the distribution release string and the bare-version expansion
+  openvox_server versions the server package with.
+
 ## [0.1.1] - 2026-09-30
 
 ### Fixed

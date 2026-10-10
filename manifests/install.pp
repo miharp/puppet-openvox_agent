@@ -5,14 +5,7 @@
 class openvox_agent::install {
   $version = $openvox_agent::package_version
 
-  $package_ensure = $version ? {
-    /\A(present|installed|latest)\z/ => $version,
-    /-/                              => $version,
-    default                          => $facts['os']['family'] ? {
-      'Debian' => "${version}-1+${openvox_agent::platform}",
-      default  => "${version}-1.${openvox_agent::platform}",
-    },
-  }
+  $package_ensure = openvox_agent::package_version($version, $openvox_agent::platform, $facts['os']['family'])
 
   # apt refuses a lower version without being told, dnf does not.
   if $facts['os']['family'] == 'Debian' and $version !~ /\A(present|installed|latest)\z/ {

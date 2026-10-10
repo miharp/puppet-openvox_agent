@@ -13,8 +13,14 @@
 #
 # Hosts running openvox-server or openvoxdb, or the Puppet packages they
 # replace, are left alone with a warning: those packages require a matching
-# openvox-agent, so the agent moves with the server. Upgrade them with
+# openvox-agent, so the agent moves with the server. Manage them with
+# [openvox_server](https://forge.puppet.com/modules/miharp/openvox_server),
+# which declares this class with `manage_server_hosts` and orders the
+# server package first, or upgrade them with
 # [ovadm](https://forge.puppet.com/modules/miharp/ovadm)'s `ovadm::upgrade`.
+#
+# Whenever the class leaves a host alone, `$openvox_agent::left_alone` holds
+# the reason, for a module declaring this class to act on.
 #
 # @example Keep agents on the latest release of their current collection
 #   class { 'openvox_agent':
@@ -49,6 +55,14 @@
 # @param yum_source
 #   Base URL the EL release package is downloaded from.
 #
+# @param manage_server_hosts
+#   Whether to manage the agent on a host running openvox-server or openvoxdb
+#   (or puppetserver or puppetdb). Off, such hosts are left alone: a server
+#   package requires an agent of its own major, so a lone agent move fails on
+#   the dependency. For a module that moves the server package first and
+#   orders it between `openvox_agent::repo` and `Package['openvox-agent']`,
+#   the way openvox_server does.
+#
 # @param manage_service
 #   Whether to put the agent service back after openvox-agent changes, and to
 #   manage `service_ensure` and `service_enable` when they are set. Replacing
@@ -76,6 +90,7 @@ class openvox_agent (
   Boolean                              $manage_repo     = true,
   Pattern[/\Ahttps?:\/\/\S+[^\/]\z/]   $apt_source      = 'https://apt.voxpupuli.org',
   Pattern[/\Ahttps?:\/\/\S+[^\/]\z/]   $yum_source      = 'https://yum.voxpupuli.org',
+  Boolean                              $manage_server_hosts = false,
   Boolean                              $manage_service  = true,
   String[1]                            $service_name    = 'puppet',
   Optional[Enum['running', 'stopped']] $service_ensure  = undef,
@@ -95,32 +110,35 @@ class openvox_agent (
 
   # Release packages are published per distribution release: debian12,
   # ubuntu24.04, el-9.
-  $platform = $facts['os']['name'] ? {
-    'Ubuntu' => "ubuntu${facts['os']['release']['full']}",
-    'Debian' => "debian${facts['os']['release']['major']}",
-    default  => "el${facts['os']['release']['major']}",
-  }
+  $platform = openvox_agent::platform()
 
-  if !$server_packages.empty {
-    warning(@("MSG"/L))
-      openvox_agent: ${trusted['certname']} runs ${server_packages.join(', ')}; server \
-      packages require a matching openvox-agent, so the agent is left alone. Upgrade \
-      the host with ovadm::upgrade.
+  # Why the host is left alone, or undef when the agent is managed. A module
+  # declaring this class reads it to leave its own packages alone too.
+  if !$server_packages.empty and !$manage_server_hosts {
+    $left_alone = @("MSG"/L)
+      runs ${server_packages.join(', ')}; server packages require a matching openvox-agent, \
+      so the agent is left alone. Manage the host with openvox_server, or upgrade it with \
+      ovadm::upgrade.
       | MSG
   } elsif $resolved_collection =~ Undef {
-    warning(@("MSG"/L))
-      openvox_agent: ${trusted['certname']} runs ${agent_package.lest || { 'no agent package' }}; \
-      set collection (such as openvox8) to switch it to OpenVox.
+    $left_alone = @("MSG"/L)
+      runs ${agent_package.lest || { 'no agent package' }}; set collection (such as openvox8) \
+      to switch it to OpenVox.
       | MSG
   } elsif $trusted['authenticated'] == 'remote' and $state['server_configured'] == false
   and Integer($resolved_collection.regsubst(/\Aopenvox/, '')) >= 9 {
     # Only for agent runs: a puppet apply host has no server to lose.
-    warning(@("MSG"/L))
-      openvox_agent: ${trusted['certname']} reaches its server through the implicit \
-      server=puppet, which OpenVox 9 removed; after moving to ${resolved_collection} \
-      every run would fail, and Puppet could no longer fix it. Set server (or \
-      server_list) first. Leaving the agent alone.
+    $left_alone = @("MSG"/L)
+      reaches its server through the implicit server=puppet, which OpenVox 9 removed; after \
+      moving to ${resolved_collection} every run would fail, and Puppet could no longer fix \
+      it. Set server (or server_list) first. Leaving the agent alone.
       | MSG
+  } else {
+    $left_alone = undef
+  }
+
+  if $left_alone {
+    warning("openvox_agent: ${trusted['certname']} ${left_alone}")
   } else {
     unless $held_packages.empty {
       warning(@("MSG"/L))
