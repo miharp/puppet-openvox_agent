@@ -247,4 +247,3 @@ host running in FIPS mode (the `fips_enabled` fact), for which OpenVox
 publishes separate packages.
 
 Returns: `String[1]` The platform string.
-
