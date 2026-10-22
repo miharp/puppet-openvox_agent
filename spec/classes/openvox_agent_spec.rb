@@ -59,6 +59,75 @@ describe 'openvox_agent' do
         end
       end
 
+      unless os_facts[:os]['family'] == 'Debian'
+        context 'in FIPS mode with the redhatfips build installed' do
+          let(:facts) { os_facts.merge(fips_enabled: true, aio_agent_version: '8.31.1', openvox_agent: agent_state.merge('fips_build' => true)) }
+          let(:params) { { package_version: '8.31.1' } }
+
+          it { is_expected.to compile.with_all_deps }
+
+          it do
+            is_expected.to contain_package('openvox8-release')
+              .with_source("https://yum.voxpupuli.org/openvox8-release-redhatfips-#{os_facts[:os]['release']['major']}.noarch.rpm")
+          end
+
+          it { is_expected.to contain_package('openvox-agent').with_ensure("8.31.1-1.redhatfips#{os_facts[:os]['release']['major']}") }
+
+          it do
+            is_expected.to contain_exec('openvox_agent restore the FIPS OpenSSL configuration')
+              .with_onlyif('test -f /opt/puppetlabs/puppet/ssl/openssl-fips.cnf -a ! -f /opt/puppetlabs/puppet/ssl/openssl.cnf')
+              .that_requires('Package[openvox-agent]')
+          end
+        end
+
+        context 'in FIPS mode with the el build installed' do
+          let(:facts) { os_facts.merge(fips_enabled: true, aio_agent_version: '8.31.1', openvox_agent: agent_state.merge('fips_build' => false, 'release_platforms' => { 'openvox8-release' => "el#{os_facts[:os]['release']['major']}" })) }
+          let(:params) { { package_version: '8.31.1' } }
+
+          it { is_expected.to compile.with_all_deps }
+          it { is_expected.to contain_exec("openvox_agent replace openvox8-release built for el#{os_facts[:os]['release']['major']} with redhatfips#{os_facts[:os]['release']['major']}") }
+          it { is_expected.to contain_package('openvox-agent').with_ensure("8.31.1-1.redhatfips#{os_facts[:os]['release']['major']}") }
+          it { is_expected.to contain_exec('openvox_agent restore the FIPS OpenSSL configuration') }
+        end
+
+        context 'outside FIPS mode with the redhatfips build installed' do
+          let(:facts) { os_facts.merge(fips_enabled: false, aio_agent_version: '8.31.1', openvox_agent: agent_state.merge('fips_build' => true, 'release_platforms' => { 'openvox8-release' => "redhatfips#{os_facts[:os]['release']['major']}" })) }
+          let(:params) { { package_version: '8.31.1' } }
+
+          it { is_expected.to compile.with_all_deps }
+          it { is_expected.to contain_exec("openvox_agent replace openvox8-release built for redhatfips#{os_facts[:os]['release']['major']} with el#{os_facts[:os]['release']['major']}") }
+          it { is_expected.to contain_package('openvox-agent').with_ensure("8.31.1-1.el#{os_facts[:os]['release']['major']}") }
+          it { is_expected.not_to contain_exec('openvox_agent restore the FIPS OpenSSL configuration') }
+        end
+
+        context 'in FIPS mode with no agent and the el release package installed' do
+          let(:facts) { os_facts.merge(fips_enabled: true, openvox_agent: agent_state.merge('agent_package' => nil, 'fips_build' => nil, 'release_platforms' => { 'openvox8-release' => "el#{os_facts[:os]['release']['major']}" })) }
+          let(:params) { { collection: 'openvox8' } }
+
+          it { is_expected.to compile.with_all_deps }
+
+          it do
+            is_expected.to contain_exec("openvox_agent replace openvox8-release built for el#{os_facts[:os]['release']['major']} with redhatfips#{os_facts[:os]['release']['major']}")
+              .with_command("rpm -Uvh --replacepkgs --oldpackage https://yum.voxpupuli.org/openvox8-release-redhatfips-#{os_facts[:os]['release']['major']}.noarch.rpm")
+              .that_comes_before('Package[openvox8-release]')
+          end
+        end
+
+        context 'in FIPS mode with the redhatfips release package installed' do
+          let(:facts) { os_facts.merge(fips_enabled: true, aio_agent_version: '8.31.1', openvox_agent: agent_state.merge('fips_build' => true, 'release_platforms' => { 'openvox8-release' => "redhatfips#{os_facts[:os]['release']['major']}" })) }
+
+          it { is_expected.to compile.with_all_deps }
+          it { is_expected.not_to contain_exec(%r{openvox_agent replace}) }
+        end
+
+        context 'outside FIPS mode with no build information' do
+          let(:facts) { os_facts.merge(aio_agent_version: '8.31.1', openvox_agent: agent_state.merge('fips_build' => nil)) }
+
+          it { is_expected.to compile.with_all_deps }
+          it { is_expected.to contain_package('openvox-agent').with_ensure('present') }
+        end
+      end
+
       context 'when moving a Puppet 7 agent to openvox8' do
         let(:agent_state) do
           {

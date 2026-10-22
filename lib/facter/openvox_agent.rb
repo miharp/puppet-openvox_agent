@@ -12,6 +12,13 @@
 #   and their Puppet predecessors), which pin openvox-agent to their own version
 # - held_packages: agent packages held by apt-mark or dnf/yum versionlock,
 #   which block an upgrade
+# - fips_build: whether the installed openvox-agent is the redhatfips build
+#   that OpenVox publishes for Enterprise Linux hosts in FIPS mode; nil on
+#   Debian-family hosts and when openvox-agent is not installed
+# - release_platforms: on EL, the platform each installed release package was
+#   built for (openvox8-release => el9 or redhatfips9), from its release tag.
+#   The el and redhatfips release packages share a name, so this is the only
+#   way to tell which repository a host has. Empty on Debian-family hosts.
 # - service: whether puppet.service was running and enabled when the run
 #   started. Replacing puppet-agent stops the service (and on EL disables it)
 #   in the middle of the run, so the class needs the state from before.
@@ -36,6 +43,8 @@ Facter.add(:openvox_agent) do
       installed = states.select { |_name, status| status[1] == 'i' }.map(&:first)
       present = states.reject { |_name, status| status[1] == 'n' }.map(&:first)
       held = Facter::Core::Execution.execute('apt-mark showhold', on_fail: '').split
+      fips_build = nil
+      release_platforms = {}
     elsif Facter::Core::Execution.which('rpm')
       installed = Facter::Core::Execution.execute("rpm -qa --queryformat '%{NAME}\\n'", on_fail: '').split
       present = installed
@@ -43,6 +52,17 @@ Facter.add(:openvox_agent) do
       locked = lock_files.select { |f| File.readable?(f) }.flat_map { |f| File.readlines(f) }
       # Entries look like "puppet-agent-0:7.34.0-1.el9.*" (or without the epoch).
       held = agent_names.select { |name| locked.any? { |line| line.start_with?("#{name}-") } }
+      fips_build = nil
+      if installed.include?('openvox-agent')
+        release = Facter::Core::Execution.execute("rpm -q --queryformat '%{RELEASE}' openvox-agent", on_fail: '')
+        fips_build = release.include?('redhatfips')
+      end
+      # A release tag looks like 1.el9 or 1.redhatfips9; the platform is what
+      # follows the first dot.
+      release_platforms = installed.grep(release_pattern).to_h do |name|
+        tag = Facter::Core::Execution.execute("rpm -q --queryformat '%{RELEASE}' #{name}", on_fail: '')
+        [name, tag.sub(%r{\A[^.]*\.}, '')]
+      end
     else
       next nil
     end
@@ -72,6 +92,8 @@ Facter.add(:openvox_agent) do
       'release_packages' => present.grep(release_pattern).sort,
       'server_packages' => server_names.select { |name| installed.include?(name) },
       'held_packages' => (held & agent_names).sort,
+      'fips_build' => fips_build,
+      'release_platforms' => release_platforms,
       'service' => service,
       'server_configured' => server_configured,
     }

@@ -6,6 +6,25 @@ Notable changes to openvox_agent are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Enterprise Linux hosts in FIPS mode (the `fips_enabled` fact) get the
+  `redhatfips` release package and the `redhatfips<major>` package build,
+  which OpenVox publishes separately from the `el` ones.
+- `fips_build` and `release_platforms` in the `openvox_agent` fact: whether
+  the installed openvox-agent is the redhatfips build, and which platform
+  each installed release package was built for.
+- The release package is replaced when the installed one was built for the
+  other platform, since the `el` and `redhatfips` release packages share a
+  name and look converged to the package resource.
+
+### Fixed
+
+- An `el` agent moved to the `redhatfips` build (a host put into FIPS mode
+  after its first install) ran without `/opt/puppetlabs/puppet/ssl/openssl.cnf`
+  and so without the FIPS provider, because that package transaction
+  deletes the file the redhatfips package writes. The class now restores it.
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

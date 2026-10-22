@@ -38,6 +38,8 @@ describe 'openvox_agent fact' do
         'release_packages' => %w[openvox8-release puppet7-release],
         'server_packages' => ['openvox-server'],
         'held_packages' => ['openvox-agent'],
+        'fips_build' => nil,
+        'release_platforms' => {},
         'service' => { 'running' => true, 'enabled' => true },
         'server_configured' => true,
       )
@@ -49,6 +51,7 @@ describe 'openvox_agent fact' do
       allow(Facter::Core::Execution).to receive(:which).with('dpkg-query').and_return(nil)
       allow(Facter::Core::Execution).to receive(:which).with('rpm').and_return('/usr/bin/rpm')
       allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -qa}, on_fail: '').and_return("puppet7-release\npuppet-agent\nbash\n")
+      allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -q --queryformat '%\{RELEASE\}' puppet7-release}, on_fail: '').and_return('1.el9')
       allow(File).to receive(:readable?).and_call_original
       allow(File).to receive(:readable?).with('/etc/dnf/plugins/versionlock.list').and_return(true)
       allow(File).to receive(:readable?).with('/etc/yum/pluginconf.d/versionlock.list').and_return(false)
@@ -67,9 +70,35 @@ describe 'openvox_agent fact' do
         'release_packages' => ['puppet7-release'],
         'server_packages' => [],
         'held_packages' => ['puppet-agent'],
+        'fips_build' => nil,
+        'release_platforms' => { 'puppet7-release' => 'el9' },
         'service' => { 'running' => false, 'enabled' => false },
         'server_configured' => false,
       )
+    end
+
+    context 'with the redhatfips openvox-agent installed' do
+      before do
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -qa}, on_fail: '').and_return("openvox8-release\nopenvox-agent\nbash\n")
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -q --queryformat '%\{RELEASE\}' openvox-agent}, on_fail: '').and_return('1.redhatfips9')
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -q --queryformat '%\{RELEASE\}' openvox8-release}, on_fail: '').and_return('1.redhatfips9')
+      end
+
+      it 'reports the FIPS build and the release package platform' do
+        expect(fact).to include('agent_package' => 'openvox-agent', 'fips_build' => true, 'release_platforms' => { 'openvox8-release' => 'redhatfips9' })
+      end
+    end
+
+    context 'with the el openvox-agent installed' do
+      before do
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -qa}, on_fail: '').and_return("openvox8-release\nopenvox-agent\nbash\n")
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -q --queryformat '%\{RELEASE\}' openvox-agent}, on_fail: '').and_return('1.el9')
+        allow(Facter::Core::Execution).to receive(:execute).with(%r{\Arpm -q --queryformat '%\{RELEASE\}' openvox8-release}, on_fail: '').and_return('1.el9')
+      end
+
+      it 'reports the el build' do
+        expect(fact).to include('fips_build' => false)
+      end
     end
   end
 

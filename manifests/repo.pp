@@ -58,11 +58,31 @@ class openvox_agent::repo {
     }
     'RedHat': {
       # EL release packages install side by side; the old ones go once the new
-      # one is in.
+      # one is in. The package name has a dash between platform and release
+      # (el-9, redhatfips-9) where the version suffix (el9) has none.
+      $rpm_platform = regsubst($openvox_agent::platform, /(\d+)\z/, '-\1')
+      $source = "${openvox_agent::yum_source}/${release}-${rpm_platform}.noarch.rpm"
+
+      # The el and redhatfips release packages share a name, so a host that
+      # has the one for the other platform (a host put into FIPS mode after
+      # its first install, say) looks converged to the package resource.
+      # Replace it when the fact says it was built for another platform; the
+      # .repo file is not a config file, so rpm rewrites it.
+      $installed_platform = $openvox_agent::state['release_platforms'].lest || { {} }[$release]
+      if $installed_platform =~ NotUndef and $installed_platform != $openvox_agent::platform {
+        exec { "openvox_agent replace ${release} built for ${installed_platform} with ${openvox_agent::platform}":
+          command  => "rpm -Uvh --replacepkgs --oldpackage ${source}",
+          unless   => "rpm -q --queryformat '%{RELEASE}' ${release} | grep -q '\\.${openvox_agent::platform}\$'",
+          path     => ['/usr/bin', '/bin'],
+          provider => 'shell',
+          before   => Package[$release],
+        }
+      }
+
       package { $release:
         ensure   => installed,
         provider => 'rpm',
-        source   => "${openvox_agent::yum_source}/${release}-el-${facts['os']['release']['major']}.noarch.rpm",
+        source   => $source,
       }
 
       package { $stale:
