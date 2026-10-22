@@ -109,7 +109,7 @@ class openvox_agent (
   }
 
   # Release packages are published per distribution release: debian12,
-  # ubuntu24.04, el-9.
+  # ubuntu24.04, el-9, and redhatfips-9 for an EL host in FIPS mode.
   $platform = openvox_agent::platform()
 
   # Why the host is left alone, or undef when the agent is managed. A module

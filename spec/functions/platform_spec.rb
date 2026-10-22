@@ -15,6 +15,15 @@ describe 'openvox_agent::platform' do
       end
 
       it { is_expected.to run.with_params.and_return(expected) }
+
+      context 'in FIPS mode' do
+        let(:facts) { os_facts.merge(fips_enabled: true) }
+        let(:expected_fips) do
+          (os_facts[:os]['family'] == 'RedHat') ? "redhatfips#{os_facts[:os]['release']['major']}" : expected
+        end
+
+        it { is_expected.to run.with_params.and_return(expected_fips) }
+      end
     end
   end
 end

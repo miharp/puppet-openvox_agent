@@ -7,6 +7,27 @@ class openvox_agent::install {
 
   $package_ensure = openvox_agent::package_version($version, $openvox_agent::platform, $facts['os']['family'])
 
+  # OpenVox builds separate agent packages for Enterprise Linux hosts in FIPS
+  # mode (redhatfips9 instead of el9), and a host moves between them as an
+  # ordinary package change: an upgrade to redhatfips, a downgrade to el.
+  # The transaction to redhatfips leaves the agent without its OpenSSL
+  # configuration, though: the redhatfips package writes
+  # /opt/puppetlabs/puppet/ssl/openssl.cnf from its post-install script and
+  # does not own it, the el package ships that path as a file, and rpm
+  # removes the old package's files after the new one's scripts have run.
+  # Without the file the FIPS provider is silently not loaded, so put it
+  # back the way the post-install script does. A no-op whenever it exists.
+  if $openvox_agent::platform =~ /\Aredhatfips/ {
+    $ssl_dir = '/opt/puppetlabs/puppet/ssl'
+    exec { 'openvox_agent restore the FIPS OpenSSL configuration':
+      command  => "cp --preserve ${ssl_dir}/openssl-fips.cnf ${ssl_dir}/openssl.cnf && chmod 0644 ${ssl_dir}/openssl.cnf",
+      onlyif   => "test -f ${ssl_dir}/openssl-fips.cnf -a ! -f ${ssl_dir}/openssl.cnf",
+      path     => ['/usr/bin', '/bin'],
+      provider => 'shell',
+      require  => Package['openvox-agent'],
+    }
+  }
+
   # apt refuses a lower version without being told, dnf does not.
   if $facts['os']['family'] == 'Debian' and $version !~ /\A(present|installed|latest)\z/ {
     $install_options = ['--allow-downgrades']

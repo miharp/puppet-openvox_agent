@@ -71,6 +71,19 @@ class { 'openvox_agent':
 }
 ```
 
+On an Enterprise Linux host in FIPS mode (the `fips_enabled` fact), the
+class uses the `redhatfips` release package and expands a bare version to
+the `redhatfips` build (`8.31.1-1.redhatfips9`), which OpenVox publishes
+separately from the `el` ones for x86-64 EL 9 and 10. That build's bundled
+OpenSSL runs with its FIPS provider; the `el` build's does not. A host that
+changes FIPS mode after its first install moves to the other build on the
+next run, as an ordinary package change: the class replaces the release
+package, which the two builds share the name of, and the agent follows. The
+move to `redhatfips` leaves the agent without its `openssl.cnf` (the
+redhatfips package writes it after install without owning it, and rpm then
+removes the `el` package's copy), so the class writes it back the way the
+package does; without it the FIPS provider would silently not load.
+
 Use a mirror of the Vox Pupuli repositories:
 
 ```puppet

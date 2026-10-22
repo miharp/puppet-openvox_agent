@@ -235,11 +235,16 @@ The `os.family` fact.
 Type: Puppet Language
 
 Release packages and package versions are per distribution release:
-`debian12`, `ubuntu24.04`, `el9`.
+`debian12`, `ubuntu24.04`, `el9`, or `redhatfips9` on an Enterprise Linux
+host running in FIPS mode (the `fips_enabled` fact), for which OpenVox
+publishes separate packages.
 
 #### `openvox_agent::platform()`
 
 Release packages and package versions are per distribution release:
-`debian12`, `ubuntu24.04`, `el9`.
+`debian12`, `ubuntu24.04`, `el9`, or `redhatfips9` on an Enterprise Linux
+host running in FIPS mode (the `fips_enabled` fact), for which OpenVox
+publishes separate packages.
 
 Returns: `String[1]` The platform string.
+
